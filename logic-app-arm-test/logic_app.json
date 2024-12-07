@@ -1,0 +1,124 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "logic_app_name": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "location": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "time_zone": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "recurrence_interval": {
+            "defaultValue": "1",
+            "type": "String"
+        },
+        "recurrence_frequency": {
+            "defaultValue": "Hour",
+            "type": "String"
+        },
+        "subscription_id": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "connection_api_id": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "connection_id": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "connection_name": {
+            "defaultValue": "",
+            "type": "String"
+        },
+        "identity_id": {
+            "defaultValue": "",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Logic/workflows",
+            "apiVersion": "2017-07-01",
+            "name": "[parameters('logic_app_name')]",
+            "location": "[parameters('location')]",
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[parameters('identity_id')]": {}
+                }
+            },
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "Recurrence": {
+                            "recurrence": {
+                                "interval": "[parameters('recurrence_interval')]",
+                                "frequency": "[parameters('recurrence_frequency')]",
+                                "timeZone": "[parameters('time_zone')]"
+                            },
+                            "evaluatedRecurrence": {
+                                "interval": "[parameters('recurrence_interval')]",
+                                "frequency": "[parameters('recurrence_frequency')]",
+                                "timeZone": "[parameters('time_zone')]"
+                            },
+                            "type": "Recurrence"
+                        }
+                    },
+                    "actions": {
+                        "List_resources_by_subscription": {
+                            "runAfter": {},
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['arm']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "[concat('/subscriptions/@{encodeURIComponent(''',parameters('subscription_id'),''')}/resources')]",
+                                "queries": {
+                                    "x-ms-api-version": "2016-06-01"
+                                }
+                            }
+                        }
+                    }
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "arm": {
+                                "id": "[parameters('connection_api_id')]",
+                                "connectionId": "[parameters('connection_id')]",
+                                "connectionName": "[parameters('connection_name')]",
+                                "connectionProperties": {
+                                    "authentication": {
+                                        "type": "ManagedServiceIdentity",
+                                        "identity": "[parameters('identity_id')]"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}
